@@ -1,0 +1,57 @@
+/* Element defaults on top of Tailwind preflight. */
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: var(--header-height);
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+
+  body {
+    @apply text-body;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-normal text-balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    @apply outline-1 outline-offset-2 outline-ink;
+  }
+
+  ::selection {
+    @apply bg-ink text-canvas;
+  }
+
+  ::placeholder {
+    @apply text-ink-subtle;
+  }
+
+  hr {
+    @apply border-line;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

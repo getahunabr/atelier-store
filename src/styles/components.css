@@ -1,0 +1,112 @@
+/*
+ * Reusable primitives.
+ * Multi-part patterns (buttons, links) sit in the components layer so plain utilities can override them.
+ * Single-purpose layout helpers are @utility so they work with variants (md:, hover:, ...).
+ */
+
+@layer components {
+  /* Buttons: square, full-contrast, uppercase tracked label, 48px touch target. */
+  .btn {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 border px-8 text-center text-label font-medium tracking-label uppercase transition-colors duration-300 ease-luxe select-none;
+    @apply disabled:pointer-events-none disabled:opacity-40 aria-disabled:pointer-events-none aria-disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply border-ink bg-ink text-canvas hover:border-ink-muted hover:bg-ink-muted;
+  }
+
+  .btn-secondary {
+    @apply border-ink bg-transparent text-ink hover:bg-ink hover:text-canvas;
+  }
+
+  /* For use over dark imagery. */
+  .btn-inverse {
+    @apply border-canvas bg-canvas text-ink hover:bg-transparent hover:text-canvas;
+  }
+
+  .btn-sm {
+    @apply min-h-10 px-5;
+  }
+
+  /* Inline copy links stay underlined; UI links use link-reveal (below). */
+  .link {
+    @apply underline decoration-1 underline-offset-4 transition-colors hover:text-ink-muted;
+  }
+
+  /* Small uppercase label for navigation, section kickers, filters. */
+  .eyebrow {
+    @apply text-label font-medium tracking-label uppercase;
+  }
+
+  .nav-link {
+    @apply link-reveal text-label tracking-nav uppercase;
+  }
+
+  /* Form field: underline-free hairline box, same height as buttons. */
+  .field {
+    @apply block min-h-12 w-full border border-line bg-canvas px-4 text-body-sm text-ink transition-colors hover:border-ink-subtle focus:border-ink focus:outline-none aria-invalid:border-critical;
+  }
+}
+
+/* Containers: centered, gutter-padded frames at three widths. */
+@utility container-page {
+  @apply mx-auto w-full max-w-page px-gutter;
+}
+
+@utility container-content {
+  @apply mx-auto w-full max-w-content px-gutter;
+}
+
+@utility container-narrow {
+  @apply mx-auto w-full max-w-narrow px-gutter;
+}
+
+/* Underline that draws in on hover, focus, or current page. For nav and UI links. */
+@utility link-reveal {
+  background: linear-gradient(currentColor, currentColor) no-repeat left bottom / 0 1px;
+  @apply pb-0.5 transition-[background-size] duration-300 ease-luxe hover:bg-size-[100%_1px] focus-visible:bg-size-[100%_1px] aria-[current=page]:bg-size-[100%_1px];
+}
+
+/* Vertical rhythm between page sections. */
+@utility section-y {
+  @apply py-section;
+}
+
+/* Hairline rule. */
+@utility rule {
+  @apply border-t border-line;
+}
+
+/* Image frame: neutral backdrop so product cut-outs sit on a consistent tone. */
+@utility media-frame {
+  @apply relative overflow-hidden bg-surface;
+
+  & > img,
+  & > video {
+    @apply absolute inset-0 size-full object-cover;
+  }
+}
+
+/* Product listing: 2 → 4 columns (even counts always fill whole rows), tight horizontal gap, generous row gap. */
+@utility product-grid {
+  @apply grid grid-cols-2 gap-x-2 gap-y-8 md:gap-x-4 md:gap-y-12 lg:grid-cols-4;
+}
+
+/* Editorial split: stacked on mobile, two abutting tiles from md. */
+@utility split {
+  @apply grid grid-cols-1 md:grid-cols-2;
+}
+
+/* Horizontal scroll rail with snap, for carousels on small screens. */
+@utility rail {
+  @apply flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain scroll-px-gutter px-gutter md:gap-4;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  & > * {
+    @apply shrink-0 snap-start;
+  }
+}
