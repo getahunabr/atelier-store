@@ -1,4 +1,4 @@
-import { ONE_SIZE, type Product } from "@/data/products";
+import { ONE_SIZE, type Product } from "@/lib/catalog-types";
 import { totalStock } from "@/lib/stock";
 
 // Listing filters live in the URL (?size=M&price=500-1000&stock=in&sort=newest) so results are
@@ -39,8 +39,8 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 export function sizeOptions(products: Product[]) {
   const sizes = new Set<string>();
   for (const product of products) {
-    for (const variant of product.variants) {
-      if (variant.size !== ONE_SIZE) sizes.add(variant.size);
+    for (const level of product.stock) {
+      if (level.size !== ONE_SIZE) sizes.add(level.size);
     }
   }
   return [...sizes];
@@ -76,7 +76,7 @@ export function applyFilters(products: Product[], filters: CatalogFilters) {
   const range = priceRanges.find((r) => r.value === filters.price);
 
   const matches = products.filter((product) => {
-    if (filters.size && !product.variants.some((v) => v.size === filters.size && v.stock > 0)) return false;
+    if (filters.size && !product.stock.some((v) => v.size === filters.size && v.stock > 0)) return false;
     if (range && (product.price < range.min || product.price >= range.max)) return false;
     if (filters.inStockOnly && totalStock(product) === 0) return false;
     return true;

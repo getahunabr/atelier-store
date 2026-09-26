@@ -4,29 +4,23 @@ import { notFound } from "next/navigation";
 
 import { CatalogView } from "@/components/catalog/catalog-view";
 import { ProductCard } from "@/components/product/product-card";
-import { categories, isCategoryKey, products } from "@/data/products";
+import { getCategory, listProductsByCategory } from "@/db/queries/catalog";
 import { applyFilters, parseFilters, sizeOptions } from "@/lib/catalog-filters";
 
-// Only known categories resolve; anything else at the top level (e.g. /bag) is a 404.
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return Object.keys(categories).map((category) => ({ category }));
-}
+// Rendered per request (filters come from searchParams), so stock is always live. Only slugs in
+// the categories table resolve; anything else at the top level (e.g. /bag) is a 404.
 
 export async function generateMetadata({ params }: PageProps<"/[category]">): Promise<Metadata> {
-  const { category: key } = await params;
-  if (!isCategoryKey(key)) return {};
-  const category = categories[key];
+  const category = await getCategory((await params).category);
+  if (!category) return {};
   return { title: category.name, description: category.description };
 }
 
 export default async function CategoryPage({ params, searchParams }: PageProps<"/[category]">) {
-  const { category: key } = await params;
-  if (!isCategoryKey(key)) notFound();
+  const category = await getCategory((await params).category);
+  if (!category) notFound();
 
-  const category = categories[key];
-  const inCategory = products.filter((product) => product.category === key);
+  const inCategory = await listProductsByCategory(category.slug);
   const sizes = sizeOptions(inCategory);
   const filters = parseFilters(await searchParams, sizes);
   const results = applyFilters(inCategory, filters);

@@ -1,7 +1,8 @@
-// Home page content. Products come from the catalog in ./products.
+// Home page content. Curated products are listed by slug and loaded from the database.
 
-import { unsplash, type Img } from "./images";
-import { getProducts } from "./products";
+import type { Img } from "@/lib/catalog-types";
+
+import { unsplash } from "./images";
 
 export type NavItem = { label: string; href: string };
 
@@ -55,7 +56,7 @@ export const editorial = {
   image: unsplash("1520975954732-35dd22299614", "Man in a black leather jacket crouching against a brick wall"),
 };
 
-export const featuredProducts = getProducts([
+export const featuredSlugs = [
   "lambskin-biker-jacket",
   "woven-leather-tote",
   "tapered-silk-trousers",
@@ -64,7 +65,7 @@ export const featuredProducts = getProducts([
   "chevron-chain-bag",
   "fringed-knit-poncho",
   "floral-stiletto-pumps",
-]);
+];
 
 export const craft = {
   eyebrow: "The Atelier",
@@ -74,14 +75,14 @@ export const craft = {
   image: unsplash("1558769132-cb1aea458c5e", "Neutral knitwear hanging on a rail beside dried grasses"),
 };
 
-export const gifts = getProducts([
+export const giftSlugs = [
   "pendant-chain-necklace",
   "minimal-leather-watch",
   "round-metal-sunglasses",
   "freshwater-pearl-strand",
   "cap-toe-derby",
   "cotton-jersey-tee",
-]);
+];
 
 export const services = [
   {

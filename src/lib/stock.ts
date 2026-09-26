@@ -1,4 +1,4 @@
-import type { Product } from "@/data/products";
+import type { Product } from "@/lib/catalog-types";
 
 export type StockState = "in_stock" | "low_stock" | "out_of_stock";
 
@@ -12,7 +12,7 @@ export function stockState(units: number): StockState {
 }
 
 export function totalStock(product: Product) {
-  return product.variants.reduce((sum, variant) => sum + variant.stock, 0);
+  return product.stock.reduce((sum, level) => sum + level.stock, 0);
 }
 
 export function isSoldOut(product: Product) {

@@ -3,7 +3,7 @@
 import { useRef, type ReactNode } from "react";
 
 import { ArrowIcon } from "@/components/icons";
-import type { Product } from "@/data/products";
+import type { Product } from "@/lib/catalog-types";
 
 import { ProductCard } from "./product-card";
 

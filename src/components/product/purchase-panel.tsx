@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 
-import { ONE_SIZE, type Variant } from "@/data/products";
+import { ONE_SIZE, type StockLevel } from "@/lib/catalog-types";
 
 import { StockStatus } from "./stock-status";
 
-export function PurchasePanel({ variants }: { variants: Variant[] }) {
-  const oneSize = variants.length === 1 && variants[0].size === ONE_SIZE;
-  const [selected, setSelected] = useState<Variant | null>(oneSize ? variants[0] : null);
+export function PurchasePanel({ stock }: { stock: StockLevel[] }) {
+  const oneSize = stock.length === 1 && stock[0].size === ONE_SIZE;
+  const [selected, setSelected] = useState<StockLevel | null>(oneSize ? stock[0] : null);
 
-  const total = variants.reduce((sum, variant) => sum + variant.stock, 0);
+  const total = stock.reduce((sum, level) => sum + level.stock, 0);
   const soldOut = total === 0;
   const canAdd = selected !== null && selected.stock > 0;
 
@@ -20,11 +20,11 @@ export function PurchasePanel({ variants }: { variants: Variant[] }) {
         <fieldset>
           <legend className="eyebrow">Size</legend>
           <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-5 xl:grid-cols-6">
-            {variants.map((variant) => {
-              const unavailable = variant.stock === 0;
+            {stock.map((level) => {
+              const unavailable = level.stock === 0;
               return (
                 <label
-                  key={variant.size}
+                  key={level.size}
                   className={`relative flex min-h-12 items-center justify-center border text-body-sm transition-colors has-checked:border-ink has-checked:bg-ink has-checked:text-canvas has-focus-visible:outline-1 has-focus-visible:outline-offset-2 has-focus-visible:outline-ink ${
                     unavailable
                       ? "cursor-not-allowed border-line text-ink-subtle line-through"
@@ -34,13 +34,13 @@ export function PurchasePanel({ variants }: { variants: Variant[] }) {
                   <input
                     type="radio"
                     name="size"
-                    value={variant.size}
+                    value={level.size}
                     disabled={unavailable}
-                    checked={selected?.size === variant.size}
-                    onChange={() => setSelected(variant)}
+                    checked={selected?.size === level.size}
+                    onChange={() => setSelected(level)}
                     className="sr-only"
                   />
-                  {variant.size}
+                  {level.size}
                   {unavailable && <span className="sr-only">, sold out</span>}
                 </label>
               );

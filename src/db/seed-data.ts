@@ -1,73 +1,68 @@
-// Sample product catalog. Replace with database queries once the catalog schema exists.
+// Seed content for the catalog tables, loaded by `npm run db:seed` (src/db/seed.ts).
+// Array order becomes each row's sort_order: categories as listed, products in "Featured" order.
 
-import { unsplash, unsplashDetail, type Img } from "./images";
+import { unsplash, unsplashDetail } from "@/data/images";
+import { ONE_SIZE, type Img, type StockLevel } from "@/lib/catalog-types";
 
-export const categories = {
-  women: {
-    name: "Women",
-    href: "/women",
-    description: "Fluid silks, soft knits and easy dresses, cut to move and made to be worn for years.",
-  },
-  men: {
-    name: "Men",
-    href: "/men",
-    description: "Leather outerwear, sharp tailoring and everyday essentials in considered fabrics.",
-  },
-  handbags: {
-    name: "Handbags",
-    href: "/handbags",
-    description: "Structured and slouchy shapes in hand-finished leather, from day totes to evening bags.",
-  },
-  shoes: {
-    name: "Shoes",
-    href: "/shoes",
-    description: "Hand-burnished leather shoes and statement heels, built on lasts refined over decades.",
-  },
-  jewelry: {
-    name: "Jewelry",
-    href: "/jewelry",
-    description: "Pearls, stones and fine chains, finished by hand in small batches.",
-  },
-  accessories: {
-    name: "Accessories",
-    href: "/accessories",
-    description: "Watches and eyewear designed to be quietly worn every day.",
-  },
-} as const;
+export type SeedCategory = { slug: string; name: string; description: string };
 
-export type CategoryKey = keyof typeof categories;
-
-export function isCategoryKey(value: string): value is CategoryKey {
-  return Object.hasOwn(categories, value);
-}
-
-/** Units on hand per size. One-size products have a single variant. */
-export type Variant = { size: string; stock: number };
-
-export type Product = {
+export type SeedProduct = {
   slug: string;
   name: string;
+  /** USD, whole units. Stored as cents. */
   price: number;
-  category: CategoryKey;
+  /** Category slug. */
+  category: string;
   styleCode: string;
-  /** ISO date the product went on sale; drives "Newest" sorting. */
   releasedAt: string;
   tag?: string;
   description: string;
   details: string[];
   care: string[];
   images: Img[];
-  variants: Variant[];
+  /** Per-size stock, in display order. */
+  variants: StockLevel[];
 };
 
-export const ONE_SIZE = "One size";
+export const categories: SeedCategory[] = [
+  {
+    slug: "women",
+    name: "Women",
+    description: "Fluid silks, soft knits and easy dresses, cut to move and made to be worn for years.",
+  },
+  {
+    slug: "men",
+    name: "Men",
+    description: "Leather outerwear, sharp tailoring and everyday essentials in considered fabrics.",
+  },
+  {
+    slug: "handbags",
+    name: "Handbags",
+    description: "Structured and slouchy shapes in hand-finished leather, from day totes to evening bags.",
+  },
+  {
+    slug: "shoes",
+    name: "Shoes",
+    description: "Hand-burnished leather shoes and statement heels, built on lasts refined over decades.",
+  },
+  {
+    slug: "jewelry",
+    name: "Jewelry",
+    description: "Pearls, stones and fine chains, finished by hand in small batches.",
+  },
+  {
+    slug: "accessories",
+    name: "Accessories",
+    description: "Watches and eyewear designed to be quietly worn every day.",
+  },
+];
 
-const oneSize = (stock: number): Variant[] => [{ size: ONE_SIZE, stock }];
+const oneSize = (stock: number): StockLevel[] => [{ size: ONE_SIZE, stock }];
 
-const sized = (stock: Record<string, number>): Variant[] =>
+const sized = (stock: Record<string, number>): StockLevel[] =>
   Object.entries(stock).map(([size, units]) => ({ size, stock: units }));
 
-export const products: Product[] = [
+export const products: SeedProduct[] = [
   {
     slug: "lambskin-biker-jacket",
     name: "Lambskin Biker Jacket",
@@ -412,23 +407,3 @@ export const products: Product[] = [
     variants: oneSize(4),
   },
 ];
-
-export function getProduct(slug: string) {
-  return products.find((product) => product.slug === slug);
-}
-
-export function getProducts(slugs: string[]) {
-  return slugs.map((slug) => {
-    const product = getProduct(slug);
-    if (!product) throw new Error(`Unknown product slug: ${slug}`);
-    return product;
-  });
-}
-
-/** Same-category products first, then the rest of the catalog. */
-export function getRelatedProducts(product: Product, limit = 6) {
-  const others = products.filter((p) => p.slug !== product.slug);
-  const sameCategory = others.filter((p) => p.category === product.category);
-  const rest = others.filter((p) => p.category !== product.category);
-  return [...sameCategory, ...rest].slice(0, limit);
-}

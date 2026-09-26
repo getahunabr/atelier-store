@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import type { Img } from "@/data/images";
+import type { Img } from "@/lib/catalog-types";
 
 // Mobile: full-bleed swipe gallery with the next image peeking in. Desktop: large stacked images.
 export function ProductGallery({ images, name }: { images: Img[]; name: string }) {

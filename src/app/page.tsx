@@ -8,13 +8,22 @@ import {
   collections,
   craft,
   editorial,
-  featuredProducts,
-  gifts,
+  featuredSlugs,
+  giftSlugs,
   hero,
   services,
 } from "@/data/storefront";
+import { getProductsBySlugs } from "@/db/queries/catalog";
 
-export default function HomePage() {
+// Rendered at build, then refreshed from the database at most every 5 minutes.
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const [featuredProducts, gifts] = await Promise.all([
+    getProductsBySlugs(featuredSlugs),
+    getProductsBySlugs(giftSlugs),
+  ]);
+
   return (
     <>
       <Hero content={hero} />

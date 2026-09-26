@@ -7,16 +7,20 @@ import { ProductAccordion } from "@/components/product/product-accordion";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductRail } from "@/components/product/product-rail";
 import { PurchasePanel } from "@/components/product/purchase-panel";
-import { categories, getProduct, getRelatedProducts, products } from "@/data/products";
 import { services } from "@/data/storefront";
+import { getProduct, getRelatedProducts, listProductSlugs } from "@/db/queries/catalog";
 import { formatPrice } from "@/lib/format";
 
-export function generateStaticParams() {
-  return products.map((product) => ({ slug: product.slug }));
+// Pages are built for every product at build time and refreshed from the database at most every
+// 5 minutes; products added later render on first request.
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  return (await listProductSlugs()).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/products/[slug]">): Promise<Metadata> {
-  const product = getProduct((await params).slug);
+  const product = await getProduct((await params).slug);
   if (!product) return {};
   return {
     title: product.name,
@@ -26,11 +30,11 @@ export async function generateMetadata({ params }: PageProps<"/products/[slug]">
 }
 
 export default async function ProductPage({ params }: PageProps<"/products/[slug]">) {
-  const product = getProduct((await params).slug);
+  const product = await getProduct((await params).slug);
   if (!product) notFound();
 
-  const category = categories[product.category];
-  const related = getRelatedProducts(product);
+  const { category } = product;
+  const related = await getRelatedProducts(product);
 
   return (
     <>
@@ -69,7 +73,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
             <p className="mt-6 text-ink-muted">{product.description}</p>
 
             <div className="mt-8">
-              <PurchasePanel variants={product.variants} />
+              <PurchasePanel stock={product.stock} />
             </div>
 
             <div className="mt-10">

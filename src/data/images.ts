@@ -1,7 +1,7 @@
 // Photography: Unsplash (https://unsplash.com/license).
 // Widths are added per breakpoint by src/lib/image-loader.ts.
 
-export type Img = { src: string; alt: string };
+import type { Img } from "@/lib/catalog-types";
 
 export const unsplash = (id: string, alt: string): Img => ({
   src: `https://images.unsplash.com/photo-${id}`,
