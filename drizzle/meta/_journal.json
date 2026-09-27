@@ -8,6 +8,27 @@
       "when": 1790419451201,
       "tag": "0000_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790451864375,
+      "tag": "0001_auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790454520268,
+      "tag": "0002_admin_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790497223598,
+      "tag": "0003_orders",
+      "breakpoints": true
     }
   ]
 }

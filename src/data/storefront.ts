@@ -20,8 +20,8 @@ export const hero = {
   eyebrow: "Autumn–Winter 2026",
   title: "Quiet Structure",
   body: "Tailored wool, soft shoulders and a palette drawn from the city at dusk.",
-  primary: { label: "Shop the collection", href: "/collections/autumn-winter-2026" },
-  secondary: { label: "Discover the story", href: "/stories/quiet-structure" },
+  primary: { label: "Shop the collection", href: "/new-in" },
+  secondary: { label: "Explore all categories", href: "/collections" },
   image: unsplash("1485968579580-b6d095142e6e", "Woman in a tartan wool coat walking along a city street"),
 };
 
@@ -52,11 +52,14 @@ export const editorial = {
   eyebrow: "The Leather Edit",
   title: "Worn in, never worn out",
   body: "Supple lambskin jackets cut close to the body, finished by hand and made to soften with every season.",
-  cta: { label: "Explore leather", href: "/collections/leather" },
+  /** "Shop the look": the piece shown in the image. */
+  productSlug: "lambskin-biker-jacket",
   image: unsplash("1520975954732-35dd22299614", "Man in a black leather jacket crouching against a brick wall"),
 };
 
+/** The first product is shown as the large featured tile. Keep 9 so the grid fills whole rows. */
 export const featuredSlugs = [
+  "wool-two-piece-suit",
   "lambskin-biker-jacket",
   "woven-leather-tote",
   "tapered-silk-trousers",
@@ -71,7 +74,6 @@ export const craft = {
   eyebrow: "The Atelier",
   title: "Made slowly, by hand",
   body: "Every piece begins in our workshop, where knitwear is finished by hand and tailoring is shaped over days rather than hours. Fewer pieces, made to last.",
-  cta: { label: "Our craft", href: "/the-atelier" },
   image: unsplash("1558769132-cb1aea458c5e", "Neutral knitwear hanging on a rail beside dried grasses"),
 };
 

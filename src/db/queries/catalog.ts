@@ -1,11 +1,11 @@
 import "server-only";
 
-import { and, asc, eq, inArray, ne, notInArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, notInArray } from "drizzle-orm";
 import { cache } from "react";
 
 import { db } from "@/db";
 import { categories, products, stock } from "@/db/schema";
-import type { Category, Product } from "@/lib/catalog-types";
+import type { Category, CategorySummary, Product } from "@/lib/catalog-types";
 
 // The only module that reads the catalog. Rows are mapped to the domain types in
 // src/lib/catalog-types.ts so components never see database shapes. `cache` dedupes calls
@@ -48,6 +48,28 @@ export const listCategories = cache(async () => {
   return rows.map(toCategory);
 });
 
+/**
+ * Categories that have products, with their product count and a cover image (the first product's
+ * first image in merchandising order).
+ */
+export const listCategorySummaries = cache(async (): Promise<CategorySummary[]> => {
+  const [rows, counts] = await Promise.all([
+    db.query.categories.findMany({
+      orderBy: [asc(categories.sortOrder)],
+      with: { products: { columns: { images: true }, orderBy: [asc(products.sortOrder)], limit: 1 } },
+    }),
+    db.select({ categoryId: products.categoryId, n: count() }).from(products).groupBy(products.categoryId),
+  ]);
+  const countById = new Map(counts.map((row) => [row.categoryId, row.n]));
+  return rows
+    .map((row) => ({
+      ...toCategory(row),
+      productCount: countById.get(row.id) ?? 0,
+      image: row.products[0]?.images[0],
+    }))
+    .filter((summary) => summary.productCount > 0);
+});
+
 export const getCategory = cache(async (slug: string) => {
   const row = await db.query.categories.findFirst({ where: eq(categories.slug, slug) });
   return row ? toCategory(row) : undefined;
@@ -62,6 +84,16 @@ export const listProductsByCategory = cache(async (categorySlug: string) => {
     ),
     with: withCategoryAndStock,
     orderBy: [asc(products.sortOrder)],
+  });
+  return rows.map(toProduct);
+});
+
+/** The most recently released products, newest first (ties keep merchandising order). */
+export const listNewArrivals = cache(async (limit: number) => {
+  const rows = await db.query.products.findMany({
+    with: withCategoryAndStock,
+    orderBy: [desc(products.releasedAt), asc(products.sortOrder)],
+    limit,
   });
   return rows.map(toProduct);
 });
@@ -86,6 +118,16 @@ export async function getProductsBySlugs(slugs: string[]) {
     if (!product) throw new Error(`Unknown product slug: ${slug}`);
     return product;
   });
+}
+
+/** Products for the given slugs that still exist; unknown slugs are skipped (e.g. a stale bag). */
+export async function findProductsBySlugs(slugs: string[]) {
+  if (slugs.length === 0) return [];
+  const rows = await db.query.products.findMany({
+    where: inArray(products.slug, slugs),
+    with: withCategoryAndStock,
+  });
+  return rows.map(toProduct);
 }
 
 /** Same-category products first, then the rest of the catalog, in merchandising order. */

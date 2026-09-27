@@ -14,7 +14,3 @@ export function stockState(units: number): StockState {
 export function totalStock(product: Product) {
   return product.stock.reduce((sum, level) => sum + level.stock, 0);
 }
-
-export function isSoldOut(product: Product) {
-  return totalStock(product) === 0;
-}

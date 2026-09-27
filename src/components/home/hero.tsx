@@ -27,14 +27,12 @@ export function Hero({ content }: { content: typeof heroContent }) {
           {content.title}
         </h1>
         <p className="mt-4 max-w-md text-body text-canvas/85">{content.body}</p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link href={content.primary.href} className="btn btn-inverse">
+        {/* One primary action; the secondary is a quiet text link so the hierarchy is unambiguous. */}
+        <div className="mt-8 flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-8">
+          <Link href={content.primary.href} className="btn btn-inverse max-sm:w-full">
             {content.primary.label}
           </Link>
-          <Link
-            href={content.secondary.href}
-            className="btn border-canvas text-canvas hover:bg-canvas hover:text-ink"
-          >
+          <Link href={content.secondary.href} className="eyebrow link-reveal">
             {content.secondary.label}
           </Link>
         </div>

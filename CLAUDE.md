@@ -6,47 +6,74 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Atelier Store — an ecommerce app in early scaffold stage. Stack: Next.js 16 (App Router, `src/` dir, Turbopack), TypeScript, Tailwind CSS v4, Better Auth 1.7, Drizzle ORM, Neon Postgres. Package manager is npm. No test framework is configured yet.
+Atelier Store — a luxury-fashion ecommerce app: storefront, browser-side bag, Better Auth accounts, Stripe Checkout with order history, and an admin area for products and stock. Stack: Next.js 16 (App Router, `src/`, Turbopack), TypeScript, Tailwind CSS v4, Better Auth 1.7, Drizzle ORM, Neon Postgres, Stripe (hosted Checkout). npm. No test framework is committed yet.
 
 ## Commands
 
 ```bash
 npm run dev          # dev server (localhost:3000)
-npm run build        # production build
-npm run lint         # ESLint (flat config, eslint-config-next)
+npm run build        # production build (needs a reachable DATABASE_URL)
+npm run lint         # ESLint + the admin guard check (scripts/check-admin-guards.mjs)
 npm run typecheck    # tsc --noEmit
+npm run check:admin  # the admin guard check alone
 
-npm run auth:generate  # Better Auth CLI -> writes src/db/schema/auth.ts
+npm run auth:generate  # Better Auth CLI (`auth` package) -> src/db/schema/auth.ts
 npm run db:generate    # drizzle-kit: SQL migrations into drizzle/
 npm run db:migrate     # apply migrations
-npm run db:push        # push schema directly (prototyping only; use generate + migrate for real changes)
-npm run db:studio      # Drizzle Studio
-npm run db:seed        # load src/db/seed-data.ts into the catalog tables (idempotent)
+npm run db:seed        # sample catalog; refuses once orders exist (`-- --force` on a dev database only)
+npm run admin:grant -- <email>    # admin role for an existing account (idempotent)
+npm run admin:revoke -- <email>   # back to "user"; applies on the next request
 ```
 
-Env vars come from `.env.local` (copy `.env.example`): `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`.
+Env vars (`.env.local`, template `.env.example`): `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Without `STRIPE_SECRET_KEY`, checkout answers 503 `stripe_not_configured`.
 
-## Database conventions
+## Working rules
 
-- **Scope** — the database holds only `categories`, `products` and `stock` (`src/db/schema/catalog.ts`). Don't add carts, orders, payments, reviews, wishlists or product variants unless asked. `stock` is one row per product + size with a quantity only (no per-size price or SKU); one-size items use the size `ONE_SIZE`.
-- **Schema style** — explicit snake_case table/column names, `integer` identity primary keys, `created_at`/`updated_at` as `timestamptz` (`updated_at` via `$onUpdate`), unique `slug` for anything addressed by URL. Money is stored as integer cents (`price_cents`) and converted to dollars only when mapping to domain types. Guard invariants in the database: foreign keys (`products → categories` ON DELETE RESTRICT, `stock → products` ON DELETE CASCADE), CHECK constraints for non-negative amounts, UNIQUE `(product_id, size)`. Keep states that can be derived (in stock / low / sold out) out of the database — `src/lib/stock.ts` computes them.
-- **Schema files** — every table file in `src/db/schema/` must be re-exported from `src/db/schema/index.ts` (drizzle-kit and `drizzle({ schema })` both read that barrel). Use relative imports in schema files; drizzle-kit doesn't resolve the `@/` alias.
-- **Migrations** — edit the schema → `npm run db:generate` → review the SQL → commit `drizzle/` → `npm run db:migrate`. Never `db:push` for real changes and never edit a migration that has been applied. drizzle-kit uses `DATABASE_URL_UNPOOLED` (Neon direct connection); the app uses the pooled `DATABASE_URL`. Apply to a Neon dev branch before main.
-- **Driver** — `src/db/index.ts` uses the Neon HTTP driver, which has no interactive transactions: use `db.batch([...])` for multi-statement writes that must be atomic. It throws at import time if `DATABASE_URL` is unset.
-- **Reading data** — only `src/db/queries/*.ts` (`import "server-only"`) query the database. They map rows to DB-free domain types in `src/lib/catalog-types.ts` and wrap lookups in React `cache()`. Components — especially client components — import types from `catalog-types`, never from `@/db` or the schema.
-- **Seeding** — `src/db/seed-data.ts` is the sample catalog (array order = `sort_order`); `npm run db:seed` upserts by slug and replaces stock rows in one batch, so it is safe to re-run.
-- **Rendering** — the home page and product pages are built from the database and revalidate every 5 minutes (`revalidate = 300`); category pages query per request. `next build` therefore needs a reachable `DATABASE_URL`.
-- **Secrets** — never read, print or edit `.env.local`/`.env`; scripts load them themselves. Only `.env.example` (placeholders) is edited.
+- **Secrets** — never read, print or edit `.env.local`/`.env`; scripts load them themselves. Only `.env.example` (placeholders) is edited. Presence checks may print whether a variable is set, never its value.
+- **Shared dev database** — the dev server and every script use the same Neon database. The user's dev server runs on port 3000: don't stop or restart it; run verification against a separate `next start -p <port>` with `BETTER_AUTH_URL` set to that origin. Test accounts use `atelier-e2e-*@example.com`; put test products on `atelier-e2e-*` slugs and delete test data afterwards instead of re-seeding (the seed resets stock and is blocked once orders exist).
 
-## Architecture
+## Database
 
-- **Auth** — `src/lib/auth.ts` (server config, Drizzle adapter with `provider: "pg"`) is mounted by the catch-all `src/app/api/auth/[...all]/route.ts` via `toNextJsHandler`. `src/lib/auth-client.ts` is the React client (same-origin, no baseURL). `nextCookies()` must remain the **last** plugin so server actions can set auth cookies. No sign-in methods are enabled yet.
-- **Better Auth schema coupling** — Better Auth 1.7 validates its Drizzle tables at runtime; until `user`, `session`, `account`, `verification` exist, every `/api/auth/*` request returns 500 (`SCHEMA_MISMATCH`). Workflow after changing auth config/plugins: `npm run auth:generate` → ensure `export * from "./auth"` is in the schema barrel → `db:generate` → `db:migrate`. Don't hand-edit the generated `auth.ts`; regenerate it.
-- **Design system** — Tailwind v4, CSS-first (no `tailwind.config`). `src/app/globals.css` only imports `src/styles/tokens.css` (`@theme` tokens; responsive `--gutter`/`--section-space`/`--header-height` on `:root`, exposed as `px-gutter`, `py-section`, `h-header`), `base.css` (element defaults), and `components.css` (`.btn*`, `.link`, `.eyebrow`, `.nav-link`, `.field` in the components layer; layout primitives like `container-page`, `product-grid`, `media-frame`, `rail`, `link-reveal` as `@utility`). Use semantic tokens (`ink`, `canvas`, `surface`, `line`, `text-body`, ...) rather than raw palette colors. Light theme only. Fonts come from `next/font` in `layout.tsx` via `--font-sans-face` / `--font-serif-face`. In v4 only `@utility` classes can be `@apply`'d, not `@layer components` classes.
-- **Images** — `next.config.ts` sets a global custom loader (`src/lib/image-loader.ts`): Unsplash URLs are resized by Unsplash's own CDN via query params; any other `src` is returned unoptimized. Add a branch there when real product media gets a storage/CDN. Store bare Unsplash URLs (`https://images.unsplash.com/photo-<id>`) without params.
-- **Sample images** — `src/data/images.ts` has `unsplash()` and `unsplashDetail()` (a focal-point zoom crop used for detail shots), used by the seed data.
-- **Storefront content** — `src/data/storefront.ts` is editorial content (hero, collection tiles, nav, footer) and the curated home-page product slugs (`featuredSlugs`, `giftSlugs`), resolved with `getProductsBySlugs`. Layout chrome (`SiteHeader`, `SiteFooter`, skip link) lives in `app/layout.tsx`.
-- **Product pages** — `app/products/[slug]` is generated for every product (`generateStaticParams`); products added later render on first request; unknown slugs 404. `src/lib/stock.ts` maps units to in stock / low (≤ `LOW_STOCK_THRESHOLD`) / sold out, used by both `ProductCard` ("Sold out" tag) and the client `PurchasePanel` (size picker). The add-to-bag button reflects availability only — there is no cart yet.
-- **Category pages** — `app/[category]/page.tsx` serves every slug in the `categories` table (`/women`, `/men`, `/handbags`, ...) and 404s anything else. A new static top-level route (e.g. `app/bag`) takes precedence over it. Filters and sort live in the URL (`?size=&price=&stock=in&sort=`) and are parsed/applied by pure functions in `src/lib/catalog-filters.ts` (invalid values are ignored); `CatalogView` is the client toolbar that rewrites the URL with `router.replace`. "Newest" sorts by each product's `releasedAt`.
-- **Sample imagery rule** — check Unsplash photos at product-page size for third-party logos/labels before using them; several were rejected or cropped for this (see comments in `src/db/seed-data.ts`).
-- The Better Auth CLI is the `auth` package (not the deprecated `@better-auth/cli`); keep its version in step with `better-auth`.
+- **Scope** — catalog (`categories`, `products`, `stock`), Better Auth tables (`user` incl. admin `role`, `session`, `account`, `verification`), orders (`orders`, `order_items`, `stripe_events`). The bag is deliberately not in the database. Don't add reviews, wishlists, variants, warehouses, stock history or a DB cart unless asked.
+- **Schema style** — snake_case names, `integer` identity PKs, `timestamptz` `created_at`/`updated_at`, unique `slug` for anything in a URL, money as integer cents. Guard invariants in the database (FKs, CHECKs for non-negative amounts/stock, UNIQUE `(product_id, size)`); derived states (in stock / low / sold out) are computed in `src/lib/stock.ts`, never stored.
+- **Schema files** — re-export every table file from `src/db/schema/index.ts`; use relative imports inside schema files (drizzle-kit doesn't resolve `@/`). Domain types used by the schema live in `src/lib/*-types.ts`.
+- **Migrations** — edit schema → `db:generate` → review SQL → commit `drizzle/` → `db:migrate`. Never `db:push` for real changes; never edit an applied migration. drizzle-kit uses `DATABASE_URL_UNPOOLED`; the app the pooled `DATABASE_URL`.
+- **Driver** — Neon HTTP: no interactive transactions, so multi-statement atomic writes use `db.batch([...])` or a single CTE statement. Network failures are retried (up to 3 attempts), so **every write must be safe to repeat**. Drizzle's "Failed query" hides the cause in `error.cause`; look for `[db]` lines in the server log.
+- **Reading data** — only `src/db/queries/*.ts` (`server-only`) query the database, wrap lookups in `cache()`, and map rows to DB-free types (`catalog-types`, `order-types`, `cart-types`). Client components never import `@/db` or the schema.
+- **Stock** — `stock.quantity` is units **available to buy now**, not a physical count: checkout subtracts units when it reserves them for an order and adds them back if that checkout expires, is canceled or fails. One row per product + size (`ONE_SIZE` = "One size" for single-size items). Admin edits are absolute values applied only if the row still holds the value the admin saw (`WHERE quantity = expected`) — never blind writes or relative +/- adjustments.
+
+## Orders, checkout and payments
+
+- Every order belongs to a signed-in customer; expose only `public_id` (uuid), never `id`. Items snapshot name, image and unit price at checkout, so catalog edits never change past orders.
+- **Pricing is server-only**: the bag stores intent (`{ slug, size, quantity }`); prices, stock caps and totals come from `POST /api/cart/quote` / `quoteCart`, and checkout re-quotes from the database and builds Stripe `price_data` from the order snapshot. Never accept prices, totals or payment status from the client.
+- **Reservation** — creating the order, its items and the stock decrement happen in one `db.batch`; the `stock_quantity_non_negative` CHECK aborts the batch on oversell. Stripe `expires_at` equals the reservation (31 min); lapsed reservations are released by a sweep at checkout start.
+- **Payment state** — `order_status` changes only on the server and only from the expected previous status (`UPDATE … WHERE status = …`), so retries, duplicate or out-of-order webhooks apply once. Transitions: pending_payment → processing / paid / expired / payment_failed / needs_review; processing → paid / payment_failed / needs_review; expired or payment_failed → needs_review if Stripe later reports money. A paid amount/currency that differs from `total_cents` → needs_review.
+- **Confirmation** comes only from Stripe: the verified webhook (`/api/webhooks/stripe`, signature over the raw body, exactly the four `checkout.session.*` events, deduped in `stripe_events` insert-if-absent, 500 on failure so Stripe retries) or a server-side `sessions.retrieve`. Reaching `/checkout/success` proves nothing; only a paid order clears the purchased lines from the bag.
+- **Ownership** — every order read, sync and cancel filters by the signed-in user's id in SQL; someone else's order is a 404, indistinguishable from a missing one.
+- **Stripe rules** (see the stripe-best-practices skill): hosted Checkout Sessions, a restricted `rk_` key, an idempotency key per order, never `payment_method_types` (dynamic payment methods) or `automatic_tax` (no tax registration). Shipping is allowed to every country Stripe supports (`src/lib/shipping-countries.ts`); addresses store only what Stripe collected — postal code, state and city are optional.
+- **Errors** — `/api/checkout` answers 503 with a `code` and always logs the real cause; the `detail` field is added only outside production. Never expose it in production, and don't promise emails or receipts the app doesn't send.
+
+## Auth and authorization
+
+- Self-managed Better Auth (don't move to Neon Managed Auth unless asked): email + password only, 30-day sessions with a 5-minute cookie cache, `admin` plugin (`role` can't be set at sign-up). `nextCookies()` must stay the **last** plugin. `BETTER_AUTH_URL` must match the serving origin (else `INVALID_ORIGIN`). After changing auth config/plugins: `auth:generate` → `db:generate` → `db:migrate`; never hand-edit `src/db/schema/auth.ts` (Better Auth validates the tables at runtime).
+- `src/proxy.ts` (Next 16's middleware) only redirects requests **without** a session cookie; it never grants access and lets server-action POSTs through. Real checks live in `src/lib/session.ts`: `requireSession()` for customer pages, `requireAdmin()` for admin pages/layouts (fresh DB read, 404 for non-admins), `assertAdmin()` in admin queries and writes. `getSession()` can be 5 minutes stale — don't base authorization on it.
+- **Admin entry points** — every admin page/layout awaits `requireAdmin()`; every export of an admin `"use server"` file starts with `return withAdmin(...)` (`src/lib/admin-guard.ts`); every function in `src/db/queries/admin.ts` starts with `await assertAdmin()`; admin writes in `src/lib/admin-catalog.ts` check the role too. `npm run lint` enforces this — keep new admin code inside those patterns. Hiding links is never the protection.
+- `?next=` redirects go through `safeRedirectPath` (same-site paths only).
+- After sign-in / sign-up / sign-out, do a full page load (`window.location.assign`); `router.replace` + `refresh` raced the client router cache. After a server action changes the session user, call `router.refresh()` from the client (the action's own render still sees the old cookie).
+
+## Admin catalog decisions
+
+- Product and category slugs are fixed once created (URLs and customers' bags reference them). Prices are whole dollars (the storefront's `formatPrice` shows no cents). New products go live immediately; there's no delete or hidden state (products on orders can't be deleted). Images are https URLs; there's no upload.
+- Admin-facing copy says "Available" and shows "Held" (units reserved by open checkouts) beside it, so nobody subtracts held units twice.
+
+## Next.js 16 / React notes
+
+- Read `node_modules/next/dist/docs/` before relying on remembered APIs. Route props are `PageProps<"/route">` with Promise `params`/`searchParams`; `next typegen` regenerates them.
+- Server actions: export plain `async function`s (not wrapped constants). React resets uncontrolled form fields after a form action, so forms that must keep input on validation errors use controlled inputs.
+- ESLint forbids `setState` in effects: adjust state during render by comparing with the previous prop/result instead.
+- Home, product and collection pages revalidate every 5 minutes (`revalidate = 300`); category and new-in pages render per request. Admin writes call `revalidatePath` for what they change; checkout doesn't, so cached pages can briefly show stale stock — the bag quote and checkout are always live.
+
+## Design system
+
+- Tailwind v4, CSS-first (no `tailwind.config`): tokens in `src/styles/tokens.css`, element defaults in `base.css`, `.btn*` / `.field` / `.eyebrow` / `.link` components and `@utility` layout primitives (`container-page`, `product-grid`, `media-frame`, `link-reveal`, …) in `components.css`. Use semantic tokens (`ink`, `canvas`, `surface`, `line`, `critical`, `success`), not raw colors. Light theme only. Only `@utility` classes can be `@apply`'d.
+- Images go through the custom loader `src/lib/image-loader.ts` (Unsplash resized by Unsplash's CDN, anything else unoptimized); store Unsplash URLs without sizing params. Check sample photos at product-page size for third-party logos or labels before using them.

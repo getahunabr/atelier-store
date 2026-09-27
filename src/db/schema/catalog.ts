@@ -1,15 +1,10 @@
 import { relations, sql } from "drizzle-orm";
-import { check, date, index, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { check, date, index, integer, jsonb, pgTable, text, unique } from "drizzle-orm/pg-core";
 
 // Relative import: drizzle-kit loads this file without the tsconfig "@/" alias.
 import type { Img } from "../../lib/catalog-types";
 
-const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
-const updatedAt = () =>
-  timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date());
+import { createdAt, updatedAt } from "./columns";
 
 export const categories = pgTable("categories", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -51,7 +46,12 @@ export const products = pgTable(
   ],
 );
 
-/** Units on hand per product and size. One-size products have a single "One size" row. */
+/**
+ * Units available to buy now, per product and size — not the physical count: checkout subtracts
+ * units when it reserves them for an order and adds them back if that checkout doesn't complete.
+ * Admin edits set this value only if it still holds what the admin saw. One-size products have a
+ * single "One size" row.
+ */
 export const stock = pgTable(
   "stock",
   {

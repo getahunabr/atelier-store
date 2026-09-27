@@ -21,6 +21,18 @@ const productId = (slug: string) => sql`(select id from ${products} where ${prod
 async function main() {
   const productSlugs = seedProducts.map((product) => product.slug);
 
+  // The seed replaces every seeded product's stock rows with the sample quantities. Once the store
+  // has orders, that would wipe stock edited in the admin and ignore units held by open checkouts
+  // (their later release would then inflate stock) — so it refuses unless explicitly forced.
+  const [{ n: orderCount }] = await db.select({ n: count() }).from(sql`orders`);
+  if (orderCount > 0 && !process.argv.includes("--force")) {
+    console.error(
+      `Refusing to seed: the database has ${orderCount} order(s), and seeding resets stock for the sample products ` +
+        `(overwriting admin stock edits). Re-run with \`npm run db:seed -- --force\` only on a development database.`,
+    );
+    process.exit(1);
+  }
+
   await db.batch([
     db
       .insert(categories)

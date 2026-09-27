@@ -73,7 +73,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[slug
             <p className="mt-6 text-ink-muted">{product.description}</p>
 
             <div className="mt-8">
-              <PurchasePanel stock={product.stock} />
+              <PurchasePanel slug={product.slug} stock={product.stock} category={product.category} />
             </div>
 
             <div className="mt-10">

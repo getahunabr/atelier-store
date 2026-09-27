@@ -15,6 +15,9 @@ export type Category = {
   description: string;
 };
 
+/** A category with what an overview tile needs: how many products it has and a cover image. */
+export type CategorySummary = Category & { productCount: number; image?: Img };
+
 export type Product = {
   slug: string;
   name: string;
