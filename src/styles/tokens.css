@@ -21,6 +21,15 @@
   --color-critical: #a8221a; /* errors, sale price */
   --color-success: #2f6b43;
 
+  /* Luxury accents (editorial surfaces; introduced with the home hero). Use sparingly: ivory for
+     text on dark imagery, brass for small details (rules, eyebrows, focus), burgundy / forest as
+     deep accents. Brass on noir is 4.6:1 — fine for small caps, not for body copy. */
+  --color-noir: #1d2123; /* matches the hero photograph's backdrop */
+  --color-ivory: #f3eee4;
+  --color-brass: #b8955e;
+  --color-burgundy: #5b1a26;
+  --color-forest: #1f3a2e;
+
   /* Type scale: small, quiet UI text; large, light editorial display. */
   --text-caption: 0.6875rem; /* 11px: legal, meta */
   --text-caption--line-height: 1rem;
@@ -57,6 +66,31 @@
   --ease-luxe: cubic-bezier(0.2, 0, 0, 1);
   --default-transition-duration: 300ms;
   --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Deliberate editorial motion: a slow settle of the image and a soft rise for text. Pair with
+     motion-reduce:animate-none. */
+  --animate-ken-burns: ken-burns 14s var(--ease-luxe) both;
+  --animate-rise: rise 1.6s var(--ease-luxe) both;
+
+  @keyframes ken-burns {
+    from {
+      transform: scale(1.1) translate3d(0, 1.5%, 0);
+    }
+    to {
+      transform: scale(1) translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 1.25rem, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
 }
 
 /* Fonts come from next/font variables set on <html> in app/layout.tsx. */

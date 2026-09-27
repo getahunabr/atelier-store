@@ -20,9 +20,9 @@ export const hero = {
   eyebrow: "Autumn–Winter 2026",
   title: "Quiet Structure",
   body: "Tailored wool, soft shoulders and a palette drawn from the city at dusk.",
-  primary: { label: "Shop the collection", href: "/new-in" },
-  secondary: { label: "Explore all categories", href: "/collections" },
-  image: unsplash("1485968579580-b6d095142e6e", "Woman in a tartan wool coat walking along a city street"),
+  primary: { label: "Discover the collection", href: "/new-in" },
+  // Editorial portrait on a charcoal studio backdrop; the hero matches its background to this photo.
+  image: unsplash("1506634572416-48cdfe530110", "Model in a burgundy wool sweater against a dark studio backdrop"),
 };
 
 export const collections: Collection[] = [
